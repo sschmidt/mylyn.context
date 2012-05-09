@@ -11,13 +11,21 @@
 
 package org.eclipse.mylyn.context.tests;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.util.Scanner;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.eclipse.mylyn.commons.sdk.util.CommonTestUtil;
 import org.eclipse.mylyn.context.core.ContextCore;
+import org.eclipse.mylyn.context.core.IContextContributor;
 import org.eclipse.mylyn.context.core.IInteractionContext;
 import org.eclipse.mylyn.context.core.IInteractionContextScaling;
 import org.eclipse.mylyn.context.core.IInteractionElement;
@@ -30,6 +38,7 @@ import org.eclipse.mylyn.internal.context.core.InteractionContext;
 import org.eclipse.mylyn.internal.context.core.InteractionContextExternalizer;
 import org.eclipse.mylyn.internal.context.core.InteractionContextManager;
 import org.eclipse.mylyn.internal.context.core.SaxContextReader;
+import org.eclipse.mylyn.monitor.core.InteractionEvent;
 
 /**
  * @author Mik Kersten
@@ -297,4 +306,47 @@ public class ContextExternalizerTest extends AbstractContextTest {
 		assertNull(context);
 	}
 
+	public void testAddContextContributor() throws Exception {
+		InteractionContextExternalizer externalizer = new InteractionContextExternalizer();
+		ContextCorePlugin contextCorePlugin = ContextCorePlugin.getDefault();
+		IContextContributor contributor = mock(IContextContributor.class);
+		when(contributor.getSerializedContextInformation()).thenReturn(null);
+
+		contextCorePlugin.addContextContributor(contributor);
+		assertEquals(1, contextCorePlugin.getContextContributor().size());
+		assertEquals(contributor, contextCorePlugin.getContextContributor().get(0));
+
+		externalizer.writeContext(context, mock(ZipOutputStream.class));
+		verify(contributor).getSerializedContextInformation();
+
+		contextCorePlugin.removeContextContributor(contributor);
+		assertEquals(0, contextCorePlugin.getContextContributor().size());
+	}
+
+	public void testWriteAdditionalContextData() throws Exception {
+		InteractionContextExternalizer externalizer = new InteractionContextExternalizer();
+		IContextContributor contributor = mock(IContextContributor.class);
+		InteractionEvent event = mockNavigation("InteractionEvent");
+		context.parseEvent(event);
+
+		String testContributorId = "myContributor";
+		String testData = "important context information";
+		InputStream testStream = new ByteArrayInputStream(testData.getBytes());
+		when(contributor.getIdentifier()).thenReturn(testContributorId);
+		when(contributor.getSerializedContextInformation()).thenReturn(testStream);
+		ContextCorePlugin.getDefault().addContextContributor(contributor);
+
+		File file = ContextCorePlugin.getContextStore().getFileForContext(context.getHandleIdentifier());
+
+		externalizer.writeContextToXml(context, file);
+		InputStream resultStream = externalizer.getAdditionalInformation(file, testContributorId);
+		assertNotNull(resultStream);
+		assertNull(externalizer.getAdditionalInformation(file, "nonExistingContributor"));
+		assertEquals(testData, new Scanner(resultStream).useDelimiter("\\A").next());
+
+		resultStream = ContextCore.getContextManager().getAdditionalContextInformation(context, testContributorId);
+		assertNotNull(resultStream);
+		assertNull(externalizer.getAdditionalInformation(file, "nonExistingContributor"));
+		file.delete();
+	}
 }
