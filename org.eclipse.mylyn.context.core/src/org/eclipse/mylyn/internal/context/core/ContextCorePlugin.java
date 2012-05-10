@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IExtension;
 import org.eclipse.core.runtime.IExtensionPoint;
@@ -69,6 +70,8 @@ public class ContextCorePlugin extends Plugin {
 	private final Map<String, Set<AbstractRelationProvider>> relationProviders = new HashMap<String, Set<AbstractRelationProvider>>();
 
 	private final InteractionContextScaling commonContextScaling = new InteractionContextScaling();
+
+	private boolean contextContributorInitialized = false;
 
 	private static final AbstractContextStructureBridge DEFAULT_BRIDGE = new AbstractContextStructureBridge() {
 
@@ -132,6 +135,12 @@ public class ContextCorePlugin extends Plugin {
 			return Collections.emptyList();
 		}
 	};
+
+	private static final String EXTENSION_ATTR_CLASS_CONTRIBUTOR = "class"; //$NON-NLS-1$
+
+	private static final String EXTENSION_ELEMENT_CONTRIBUTOR = "contentContributor"; //$NON-NLS-1$
+
+	private static final String EXTENSION_ID_CONTRIBUTOR = "org.eclipse.mylyn.context.core.contributor"; //$NON-NLS-1$
 
 	public ContextCorePlugin() {
 		INSTANCE = this;
@@ -215,10 +224,40 @@ public class ContextCorePlugin extends Plugin {
 	}
 
 	public List<IContextContributor> getContextContributor() {
+		initContextContributor();
 		return contextContributor;
 	}
 
-	// TODO: add extension point to register context provider
+	private void initContextContributor() {
+		if (!contextContributorInitialized) {
+			IExtensionRegistry registry = Platform.getExtensionRegistry();
+
+			IExtensionPoint extensionPoint = registry.getExtensionPoint(ContextCorePlugin.EXTENSION_ID_CONTRIBUTOR);
+			IExtension[] extensions = extensionPoint.getExtensions();
+			for (IExtension extension : extensions) {
+				readContextContributor(extension.getConfigurationElements());
+			}
+			contextContributorInitialized = true;
+		}
+	}
+
+	private void readContextContributor(IConfigurationElement[] elements) {
+		for (IConfigurationElement element : elements) {
+			if (element.getName().compareTo(ContextCorePlugin.EXTENSION_ELEMENT_CONTRIBUTOR) == 0) {
+				try {
+					Object object = element.createExecutableExtension(ContextCorePlugin.EXTENSION_ATTR_CLASS_CONTRIBUTOR);
+					if (object instanceof IContextContributor) {
+						contextContributor.add((IContextContributor) object);
+					}
+				} catch (CoreException e) {
+					StatusHandler.log(new Status(IStatus.WARNING, ContextCorePlugin.ID_PLUGIN,
+							"ignoring contextContributor because of invalid extension point" //$NON-NLS-1$
+							, new Exception()));
+				}
+			}
+		}
+	}
+
 	public void addContextContributor(IContextContributor contributor) {
 		contextContributor.add(contributor);
 	}
