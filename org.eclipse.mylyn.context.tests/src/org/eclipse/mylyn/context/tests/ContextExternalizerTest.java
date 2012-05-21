@@ -52,6 +52,8 @@ public class ContextExternalizerTest extends AbstractContextTest {
 
 	private IInteractionContextScaling scaling;
 
+	private File contextFile = null;
+
 	@Override
 	protected void setUp() throws Exception {
 		super.setUp();
@@ -62,6 +64,10 @@ public class ContextExternalizerTest extends AbstractContextTest {
 
 	@Override
 	protected void tearDown() throws Exception {
+		if (contextFile != null && contextFile.exists()) {
+			contextFile.delete();
+		}
+
 		super.tearDown();
 	}
 
@@ -336,17 +342,16 @@ public class ContextExternalizerTest extends AbstractContextTest {
 		when(contributor.getSerializedContextInformation()).thenReturn(testStream);
 		ContextCorePlugin.getDefault().addContextContributor(contributor);
 
-		File file = ContextCorePlugin.getContextStore().getFileForContext(context.getHandleIdentifier());
+		contextFile = ContextCorePlugin.getContextStore().getFileForContext(context.getHandleIdentifier());
 
-		externalizer.writeContextToXml(context, file);
-		InputStream resultStream = externalizer.getAdditionalInformation(file, testContributorId);
+		externalizer.writeContextToXml(context, contextFile);
+		InputStream resultStream = externalizer.getAdditionalInformation(contextFile, testContributorId);
 		assertNotNull(resultStream);
-		assertNull(externalizer.getAdditionalInformation(file, "nonExistingContributor"));
+		assertNull(externalizer.getAdditionalInformation(contextFile, "nonExistingContributor"));
 		assertEquals(testData, new Scanner(resultStream).useDelimiter("\\A").next());
 
 		resultStream = ContextCore.getContextManager().getAdditionalContextInformation(context, testContributorId);
 		assertNotNull(resultStream);
-		assertNull(externalizer.getAdditionalInformation(file, "nonExistingContributor"));
-		file.delete();
+		assertNull(externalizer.getAdditionalInformation(contextFile, "nonExistingContributor"));
 	}
 }

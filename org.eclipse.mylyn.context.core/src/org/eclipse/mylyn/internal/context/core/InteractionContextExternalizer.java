@@ -15,7 +15,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -25,6 +24,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.commons.io.IOUtils;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -161,23 +161,11 @@ public class InteractionContextExternalizer {
 						InteractionContextManager.CONTEXT_FILENAME_ENCODING);
 				ZipEntry zipEntry = new ZipEntry(encoded);
 				outputStream.putNextEntry(zipEntry);
-				writeAdditionalContextInformation(additionalContextInformation, outputStream);
+				IOUtils.copy(additionalContextInformation, outputStream);
 				outputStream.flush();
 				outputStream.closeEntry();
 			}
 		}
-	}
-
-	private void writeAdditionalContextInformation(InputStream input, OutputStream output) throws IOException {
-		byte[] buf = new byte[8192];
-		while (true) {
-			int length = input.read(buf);
-			if (length < 0) {
-				break;
-			}
-			output.write(buf, 0, length);
-		}
-		input.close();
 	}
 
 	public InputStream getAdditionalInformation(File file, String contributorIdentifier) throws IOException {
