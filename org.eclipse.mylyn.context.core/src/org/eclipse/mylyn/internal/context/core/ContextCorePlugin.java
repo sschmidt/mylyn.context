@@ -22,7 +22,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IExtension;
 import org.eclipse.core.runtime.IExtensionPoint;
@@ -32,6 +31,7 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Plugin;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.mylyn.commons.core.ExtensionPointReader;
 import org.eclipse.mylyn.commons.core.StatusHandler;
 import org.eclipse.mylyn.context.core.AbstractContextStructureBridge;
 import org.eclipse.mylyn.context.core.ContextCore;
@@ -53,7 +53,7 @@ public class ContextCorePlugin extends Plugin {
 
 	private final Map<String, Set<String>> childContentTypeMap = new ConcurrentHashMap<String, Set<String>>();
 
-	private final List<IContextContributor> contextContributor = new CopyOnWriteArrayList<IContextContributor>();
+	private List<IContextContributor> contextContributor = new CopyOnWriteArrayList<IContextContributor>();
 
 	// specifies that one content type should shadow another
 	// the <value> content type shadows the <key> content typee
@@ -136,11 +136,9 @@ public class ContextCorePlugin extends Plugin {
 		}
 	};
 
-	private static final String EXTENSION_ATTR_CLASS_CONTRIBUTOR = "class"; //$NON-NLS-1$
-
 	private static final String EXTENSION_ELEMENT_CONTRIBUTOR = "contentContributor"; //$NON-NLS-1$
 
-	private static final String EXTENSION_ID_CONTRIBUTOR = "org.eclipse.mylyn.context.core.contributor"; //$NON-NLS-1$
+	private static final String EXTENSION_ID_CONTRIBUTOR = "contributor"; //$NON-NLS-1$
 
 	public ContextCorePlugin() {
 		INSTANCE = this;
@@ -230,31 +228,12 @@ public class ContextCorePlugin extends Plugin {
 
 	private void initContextContributor() {
 		if (!contextContributorInitialized) {
-			IExtensionRegistry registry = Platform.getExtensionRegistry();
-
-			IExtensionPoint extensionPoint = registry.getExtensionPoint(ContextCorePlugin.EXTENSION_ID_CONTRIBUTOR);
-			IExtension[] extensions = extensionPoint.getExtensions();
-			for (IExtension extension : extensions) {
-				readContextContributor(extension.getConfigurationElements());
-			}
+			ExtensionPointReader<IContextContributor> extensionPointReader = new ExtensionPointReader<IContextContributor>(
+					ContextCorePlugin.ID_PLUGIN, ContextCorePlugin.EXTENSION_ID_CONTRIBUTOR,
+					ContextCorePlugin.EXTENSION_ELEMENT_CONTRIBUTOR, IContextContributor.class);
+			extensionPointReader.read();
+			contextContributor = extensionPointReader.getItems();
 			contextContributorInitialized = true;
-		}
-	}
-
-	private void readContextContributor(IConfigurationElement[] elements) {
-		for (IConfigurationElement element : elements) {
-			if (element.getName().compareTo(ContextCorePlugin.EXTENSION_ELEMENT_CONTRIBUTOR) == 0) {
-				try {
-					Object object = element.createExecutableExtension(ContextCorePlugin.EXTENSION_ATTR_CLASS_CONTRIBUTOR);
-					if (object instanceof IContextContributor) {
-						contextContributor.add((IContextContributor) object);
-					}
-				} catch (CoreException e) {
-					StatusHandler.log(new Status(IStatus.WARNING, ContextCorePlugin.ID_PLUGIN,
-							"ignoring contextContributor because of invalid extension point" //$NON-NLS-1$
-							, new Exception()));
-				}
-			}
 		}
 	}
 
