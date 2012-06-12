@@ -11,6 +11,8 @@
 
 package org.eclipse.mylyn.java.tests;
 
+import static org.mockito.Mockito.mock;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -21,6 +23,7 @@ import org.eclipse.jdt.internal.ui.filters.ImportDeclarationFilter;
 import org.eclipse.jdt.internal.ui.packageview.PackageExplorerPart;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.ViewerFilter;
+import org.eclipse.mylyn.context.core.IContributedInteractionElement;
 import org.eclipse.mylyn.context.sdk.java.AbstractJavaContextTest;
 import org.eclipse.mylyn.context.ui.AbstractFocusViewAction;
 import org.eclipse.mylyn.context.ui.InterestFilter;
@@ -109,4 +112,10 @@ public class InterestFilterTest extends AbstractJavaContextTest {
 //		filter.setExcludedMatches(null);
 	}
 
+	public void testInterestFilterContribution() {
+		applyAction.update(true);
+		filter = applyAction.getInterestFilter();
+		assertNotNull(filter);
+		assertTrue(filter.select(explorer.getTreeViewer(), null, mock(IContributedInteractionElement.class)));
+	}
 }

@@ -42,6 +42,8 @@ import org.eclipse.mylyn.context.core.AbstractContextListener;
 import org.eclipse.mylyn.context.core.AbstractContextStructureBridge;
 import org.eclipse.mylyn.context.core.ContextChangeEvent;
 import org.eclipse.mylyn.context.core.ContextCore;
+import org.eclipse.mylyn.context.core.IContextContributor;
+import org.eclipse.mylyn.context.core.IContributedInteractionElement;
 import org.eclipse.mylyn.context.core.IInteractionContext;
 import org.eclipse.mylyn.context.core.IInteractionElement;
 import org.eclipse.mylyn.internal.context.core.ContextCorePlugin;
@@ -199,9 +201,11 @@ public class InvisibleContextElementsPart {
 									Display.getDefault().asyncExec(new Runnable() {
 										public void run() {
 											ContextCorePlugin.getContextManager().deleteElements(allToRemove, true);
+											for (IContextContributor contributor : ContextCore.getContextContributor()) {
+												contributor.removeElements(allToRemove);
+											}
 										}
 									});
-
 								} else {
 									MessageDialog.openInformation(Display.getCurrent().getActiveShell(),
 											Messages.ContextEditorFormPage_Remove_Invisible,
@@ -402,7 +406,8 @@ public class InvisibleContextElementsPart {
 				});
 
 				return Status.OK_STATUS;
-			};
+			}
+
 		};
 		j.schedule();
 
@@ -414,8 +419,20 @@ public class InvisibleContextElementsPart {
 		}
 		List<IInteractionElement> allToRemove = context.getAllElements();
 
+		for (IContextContributor contributor : ContextCore.getContextContributor()) {
+			Collection<IContributedInteractionElement> allElements = contributor.getAllElements();
+			if (allElements != null) {
+				allToRemove.addAll(allElements);
+			}
+		}
+
 		List<IInteractionElement> allVisibleElements = new ArrayList<IInteractionElement>();
 		for (Object visibleObject : allVisible) {
+			if (visibleObject instanceof IInteractionElement) {
+				allVisibleElements.add((IInteractionElement) visibleObject);
+				continue;
+			}
+
 			for (AbstractContextStructureBridge bridge : ContextCorePlugin.getDefault().getStructureBridges().values()) {
 //			AbstractContextStructureBridge bridge = ContextCorePlugin.getDefault().getStructureBridge(visibleObject);
 				if (bridge != null) {
@@ -437,6 +454,13 @@ public class InvisibleContextElementsPart {
 					if (element != null) {
 						allVisibleElements.add(element);
 					}
+				}
+			}
+
+			for (IContextContributor contributor : ContextCore.getContextContributor()) {
+				IInteractionElement element = contributor.getInteractionElement(visibleObject);
+				if (element != null) {
+					allVisibleElements.add(element);
 				}
 			}
 		}

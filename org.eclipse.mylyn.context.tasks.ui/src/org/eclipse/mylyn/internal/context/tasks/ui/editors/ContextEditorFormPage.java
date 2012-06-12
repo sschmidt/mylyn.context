@@ -379,7 +379,7 @@ public class ContextEditorFormPage extends FormPage {
 		refresh();
 	}
 
-	private void refresh() {
+	public void refresh() {
 		createRefreshJob();
 		if (refreshJob != null) {
 			refreshJob.refresh();

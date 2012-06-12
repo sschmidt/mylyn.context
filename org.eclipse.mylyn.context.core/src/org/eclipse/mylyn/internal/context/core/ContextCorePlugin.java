@@ -53,7 +53,7 @@ public class ContextCorePlugin extends Plugin {
 
 	private final Map<String, Set<String>> childContentTypeMap = new ConcurrentHashMap<String, Set<String>>();
 
-	private List<IContextContributor> contextContributor = new CopyOnWriteArrayList<IContextContributor>();
+	private final List<IContextContributor> contextContributor = new CopyOnWriteArrayList<IContextContributor>();
 
 	// specifies that one content type should shadow another
 	// the <value> content type shadows the <key> content typee
@@ -232,7 +232,7 @@ public class ContextCorePlugin extends Plugin {
 					ContextCorePlugin.ID_PLUGIN, ContextCorePlugin.EXTENSION_ID_CONTRIBUTOR,
 					ContextCorePlugin.EXTENSION_ELEMENT_CONTRIBUTOR, IContextContributor.class);
 			extensionPointReader.read();
-			contextContributor = extensionPointReader.getItems();
+			contextContributor.addAll(extensionPointReader.getItems());
 			contextContributorInitialized = true;
 		}
 	}

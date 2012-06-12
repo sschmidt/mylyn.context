@@ -11,6 +11,8 @@
 
 package org.eclipse.mylyn.internal.context.tasks.ui.editors;
 
+import org.eclipse.mylyn.context.core.IContextContributor;
+import org.eclipse.mylyn.context.core.IContributedInteractionElement;
 import org.eclipse.mylyn.context.core.IInteractionContext;
 import org.eclipse.mylyn.context.core.IInteractionElement;
 import org.eclipse.mylyn.context.ui.InterestFilter;
@@ -36,6 +38,12 @@ public class ScalableInterestFilter extends InterestFilter {
 		} else {
 			return element.getInterest().getValue() >= threshold;
 		}
+	}
+
+	@Override
+	protected boolean isInteresting(IContributedInteractionElement contributorElement) {
+		IContextContributor contextContributor = contributorElement.getContextContributor();
+		return contextContributor.isInteresting(contributorElement, threshold);
 	}
 
 	public void setThreshold(double threshold) {

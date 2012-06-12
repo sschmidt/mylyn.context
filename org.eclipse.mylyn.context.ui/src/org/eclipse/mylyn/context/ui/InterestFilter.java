@@ -29,6 +29,8 @@ import org.eclipse.jface.viewers.ViewerFilter;
 import org.eclipse.mylyn.commons.core.StatusHandler;
 import org.eclipse.mylyn.context.core.AbstractContextStructureBridge;
 import org.eclipse.mylyn.context.core.ContextCore;
+import org.eclipse.mylyn.context.core.IContextContributor;
+import org.eclipse.mylyn.context.core.IContributedInteractionElement;
 import org.eclipse.mylyn.context.core.IImplicitlyIntersting;
 import org.eclipse.mylyn.context.core.IInteractionContext;
 import org.eclipse.mylyn.context.core.IInteractionElement;
@@ -77,12 +79,24 @@ public class InterestFilter extends ViewerFilter {
 				return true;
 			}
 
+			if (object instanceof IContributedInteractionElement) {
+				IContributedInteractionElement contributorElement = (IContributedInteractionElement) object;
+				return isInteresting(contributorElement);
+			}
+
 			IInteractionElement element = null;
 			if (object instanceof IImplicitlyIntersting) {
 				return true;
 			} else if (object instanceof IInteractionElement) {
 				element = (IInteractionElement) object;
 			} else {
+				for (IContextContributor contributor : ContextCore.getContextContributor()) {
+					IContributedInteractionElement contributedElement = contributor.getInteractionElement(object);
+					if (contributedElement != null) {
+						return isInteresting(contributedElement);
+					}
+				}
+
 				AbstractContextStructureBridge bridge = ContextCore.getStructureBridge(object);
 				if (bridge.getContentType() == null) {
 					// try to resolve the resource
@@ -145,6 +159,13 @@ public class InterestFilter extends ViewerFilter {
 					+ viewer.getClass(), t));
 		}
 		return false;
+	}
+
+	/**
+	 * @since 3.8
+	 */
+	protected boolean isInteresting(IContributedInteractionElement contributorElement) {
+		return true;
 	}
 
 	private boolean isRootElement(Viewer viewer, Object parent, Object object) {
