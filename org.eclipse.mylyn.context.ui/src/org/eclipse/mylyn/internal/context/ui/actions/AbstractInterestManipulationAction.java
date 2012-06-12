@@ -21,6 +21,7 @@ import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.mylyn.commons.workbench.WorkbenchUtil;
 import org.eclipse.mylyn.context.core.AbstractContextStructureBridge;
 import org.eclipse.mylyn.context.core.ContextCore;
+import org.eclipse.mylyn.context.core.IContextContributor;
 import org.eclipse.mylyn.context.core.IInteractionContext;
 import org.eclipse.mylyn.context.core.IInteractionElement;
 import org.eclipse.mylyn.internal.context.core.ContextCorePlugin;
@@ -101,6 +102,10 @@ public abstract class AbstractInterestManipulationAction implements IViewActionD
 					} catch (Exception e) {
 						// ignore
 					}
+
+					for (IContextContributor contributor : ContextCore.getContextContributor()) {
+						contributor.removeElements(nodes);
+					}
 				}
 				boolean manipulated = ContextCorePlugin.getContextManager().manipulateInterestForElements(nodes,
 						increment, false, preserveUninteresting, SOURCE_ID, getContext(), true);
@@ -135,6 +140,13 @@ public abstract class AbstractInterestManipulationAction implements IViewActionD
 			AbstractContextStructureBridge bridge = ContextCore.getStructureBridge(object);
 			String handle = bridge.getHandleIdentifier(object);
 			node = ContextCore.getContextManager().getElement(handle);
+			if (node == null) {
+				for (IContextContributor contributor : ContextCore.getContextContributor()) {
+					if (contributor.getInteractionElement(object) != null) {
+						node = contributor.getInteractionElement(object);
+					}
+				}
+			}
 		}
 		return node;
 	}

@@ -24,13 +24,17 @@ import org.eclipse.jface.viewers.AbstractTreeViewer;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.StructuredViewer;
+import org.eclipse.jface.viewers.TreeSelection;
 import org.eclipse.mylyn.commons.ui.CommonImages;
 import org.eclipse.mylyn.commons.workbench.DelayedRefreshJob;
 import org.eclipse.mylyn.context.core.AbstractContextListener;
 import org.eclipse.mylyn.context.core.AbstractContextStructureBridge;
 import org.eclipse.mylyn.context.core.ContextChangeEvent;
 import org.eclipse.mylyn.context.core.ContextCore;
+import org.eclipse.mylyn.context.core.IContextContributor;
+import org.eclipse.mylyn.context.core.IContributedInteractionElement;
 import org.eclipse.mylyn.context.core.IInteractionElement;
+import org.eclipse.mylyn.context.ui.RemoveFromContextAction;
 import org.eclipse.mylyn.internal.context.core.ContextCorePlugin;
 import org.eclipse.mylyn.internal.context.ui.ContextUiPlugin;
 import org.eclipse.mylyn.internal.context.ui.views.ContextNodeOpenListener;
@@ -519,6 +523,35 @@ public class ContextEditorFormPage extends FormPage {
 			manager.remove("org.eclipse.mylyn.resources.ui.ui.interest.remove.element"); //$NON-NLS-1$
 		}
 		manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
+		manager.remove(RemoveFromContextAction.ACTION_ID);
+
+		final ISelection selection = commonViewer.getSelection();
+		if (selection instanceof TreeSelection) {
+			TreeSelection treeSelection = (TreeSelection) selection;
+			boolean addDeleteAction = false;
+			for (Object object : treeSelection.toList()) {
+				if (isContributedElement(object)) {
+					addDeleteAction = true;
+					break;
+				}
+			}
+			if (addDeleteAction) {
+				manager.add(new RemoveFromContextAction(commonViewer));
+			}
+		}
+	}
+
+	private boolean isContributedElement(Object element) {
+		if (element instanceof IContributedInteractionElement) {
+			return true;
+		} else {
+			for (IContextContributor contributor : ContextCore.getContextContributor()) {
+				if (contributor.getInteractionElement(element) != null) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	public ISelection getSelection() {
